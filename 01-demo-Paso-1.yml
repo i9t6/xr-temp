@@ -65,13 +65,13 @@
       register: final_var_rollback
 
     - name: Creando archivos de respaldo
-      file: state=touch path=./{{ item }}.json
+      file: state=touch path=/fqc/{{ item }}.json
       loop:
         - '{{ file_changes_json }}'
         - '{{ file_rollback_json }}'
 
     - name: Guardando información de respaldo {{ file_changes_json }}.json y {{ file_rollback_json }}.json
-      lineinfile: line="{{ item.record }}" dest=./{{ item.file }}.json
+      lineinfile: line="{{ item.record }}" dest=/fqc/{{ item.file }}.json
       loop:
         - file: '{{ file_changes_json }}'
           record: "{{ final_var.meta }}"
