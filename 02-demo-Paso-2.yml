@@ -28,7 +28,7 @@
       # modulo en python para crear archivo de configuracion de policy-maps con velocidades temporales
       demo_module_03:
         var1: '{{ tabla_maps }}'
-        var2: '{{ file_policymap_cfg }}'
+        var2: '{{ storage_path }}/{{ file_policymap_cfg }}'
       register: nuevos_policy_maps
  
     - name: Configurando nuevos policy_maps
