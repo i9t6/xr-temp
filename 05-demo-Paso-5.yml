@@ -28,7 +28,7 @@
  
     - name: Abrir archivo de cambios {{ file_rollback_json }}.json
       set_fact:
-        new_var: "{{ lookup('file', './{{ file_rollback_json }}.json') }}"
+        new_var: "{{ lookup('file', '{{ storage_path }}/{{ file_rollback_json }}.json') }}"
       no_log: true
 
     - name: Respaldo policy_map Bundle{{ bundle_var }} antes de cambio
