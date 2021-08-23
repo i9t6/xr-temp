@@ -1,0 +1,53 @@
+---
+# Copyright (c) 2021 Cisco and/or its affiliates.
+# 
+# This software is licensed to you under the terms of the Cisco Sample
+# Code License, Version 1.1 (the "License"). You may obtain a copy of the
+# License at
+# 
+#                https://developer.cisco.com/docs/licenses
+# 
+# All use of the material herein must be in accordance with the terms of
+# the License. All rights not expressly granted by the License are
+# reserved. Unless required by applicable law or agreed to separately in
+# writing, software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+# or implied.
+# 
+# AUTHOR(s): Francisco Quiroz <frquiroz@cisco.com>
+
+
+- name: Automation XR - ICE
+  hosts: "{{ router_var }}"
+  connection: local
+  gather_facts: no
+  vars_files:
+    - ./external_vars.yml
+
+  tasks:
+    - name: Respaldo Bundle {{ bundle_var }} antes de cambio
+      cisco.iosxr.iosxr_command:
+        commands:
+        - sh bundle bundle-ether {{ bundle_var }}
+      register: antes_var 
+
+    - name: Activando las interaces indicadas 
+      cisco.iosxr.iosxr_config:
+        lines:
+        - bundle id {{ bundle_var }} mode on
+        - no shutdown
+        parents: interface {{ item }}
+      loop: "{{ elementos_var }}"
+
+    - name: Respaldo Bundle {{ bundle_var }} despues del cambio
+      cisco.iosxr.iosxr_command:
+        commands:
+        - sh bundle bundle-ether {{ bundle_var }}
+      register: despues_var 
+
+    - name: print
+      debug:
+        msg: 
+        - "{{ antes_var.stdout_lines }}"
+        - "{{ despues_var.stdout_lines }}"
+    

@@ -1,0 +1,91 @@
+---
+# Copyright (c) 2021 Cisco and/or its affiliates.
+# 
+# This software is licensed to you under the terms of the Cisco Sample
+# Code License, Version 1.1 (the "License"). You may obtain a copy of the
+# License at
+# 
+#                https://developer.cisco.com/docs/licenses
+# 
+# All use of the material herein must be in accordance with the terms of
+# the License. All rights not expressly granted by the License are
+# reserved. Unless required by applicable law or agreed to separately in
+# writing, software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+# or implied.
+# 
+# AUTHOR(s): Francisco Quiroz <frquiroz@cisco.com>
+
+- name: Automation XR - Para ICE
+  hosts: "{{ router_var }}"
+  connection: local
+  gather_facts: no
+  vars_files:
+    - ./external_vars.yml
+
+  tasks:
+    - name: Recopilando informacion del Bundle {{ bundle_var }}
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show ipv4 interface brief | include Ether{{ bundle_var }}
+      register: temp_var1
+
+    - name: Subinterfaces del bundle {{ bundle_var }}
+      set_fact:
+        list_servicios: "{{ list_servicios|default([]) + [item] }}"
+      loop: "{{ temp_var1.stdout_lines[0] | regex_findall('Bundle-Ether[0-9]+\\.[0-9]+') }}"
+      no_log: true
+    
+    - name: Policy-map en las subinterfaces del bundle {{ bundle_var }}
+      cisco.iosxr.iosxr_command:
+        commands:
+        - sh policy-map applied interface  {{ item }} | i "(IN|OUT)"
+      loop: "{{ list_servicios }}"
+      register: temp_var2
+      
+    - name: Recopilando informacion de descripciones
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show interface description | include BE{{ bundle_var }}
+      register: temp_var3
+    
+    - name: Creando resumen de cambios temporales, (formato JSON)
+      # modulo en python para crear json de los cambios
+      demo_module_01:
+        var1: '{{ temp_var1.stdout_lines[0] }}'
+        var2: '{{ temp_var2.results }}'
+        var3: '{{ temp_var3.stdout_lines[0] }}'
+        var4: '{{ tabla_maps }}'
+      register: final_var
+
+    - name: Creando resumen de cambios para restaurar configuracion, (formato JSON)
+      # modulo en python para crear el json del rollback
+      demo_module_02:
+        var1: '{{ final_var.meta }}'
+      register: final_var_rollback
+
+    - name: Creando archivos de respaldo
+      file: state=touch path=./{{ item }}.json
+      loop:
+        - '{{ file_changes_json }}'
+        - '{{ file_rollback_json }}'
+
+    - name: Guardando información de respaldo {{ file_changes_json }}.json y {{ file_rollback_json }}.json
+      lineinfile: line="{{ item.record }}" dest=./{{ item.file }}.json
+      loop:
+        - file: '{{ file_changes_json }}'
+          record: "{{ final_var.meta }}"
+        - file: '{{ file_rollback_json }}'
+          record: "{{ final_var_rollback.meta }}"
+      no_log: true
+
+    - name: Resumen de informacion recopilada
+      debug:
+        msg: 
+        - -------- Antes ----------
+        - -------------------------
+        - "{{ final_var.meta }}"
+        - -------- Rollback -------
+        - -------------------------
+        - "{{ final_var_rollback.meta }}"
+
