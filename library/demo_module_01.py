@@ -20,17 +20,31 @@ ANSIBLE_METADATA = {
     'status': ['preview']
 }
 
+DOCUMENTATION = """
+---
+module: demo_module
+
+"""
+
+EXAMPLES = """
+- demo_module
+"""
+
+RETURN = """
+demo module retur
+"""
+
 from ansible.module_utils.basic import AnsibleModule
 import re
 
 def main():
-    """Ansible module to integrate a summary of the changes in a json dictionary."""
+    """Ansible module to verify IP reachability using Ping RPC over NETCONF."""
     module = AnsibleModule(
-        argument_spec = dict(
-            var1 = dict(type='list', required=True),
-            var2 = dict(type='list', required=True),
-            var3 = dict(type='list', required=True),
-            var4 = dict(type='dict', required=True)
+        argument_spec=dict(
+            var1=dict(type='list', required=True),
+            var2=dict(type='list', required=True),
+            var3=dict(type='list', required=True),
+            var4=dict(type='dict', required=True)
         ),
         supports_check_mode=True
     )
@@ -50,6 +64,10 @@ def main():
                 dic_temp[i['item']]['in_old']=re.findall(r"[0-9]+Mbps-IN",l)[0]
             elif "Mbps-OUT" in l:
                 dic_temp[i['item']]['out_old']=re.findall(r"[0-9]+Mbps-OUT",l)[0]
+            elif "Gbps-IN" in l:
+                dic_temp[i['item']]['in_old']=re.findall(r"[0-9]+Gbps-IN",l)[0]
+            elif "Gbps-OUT" in l:
+                dic_temp[i['item']]['out_old']=re.findall(r"[0-9]+Gbps-OUT",l)[0]
             elif "No policy-map" in l:
                 if 'input' in l:
                     dic_temp[i['item']]['in_old']='tbd'
@@ -59,10 +77,13 @@ def main():
     for i in module.params['var3']:
         try:
             int=re.findall(r'BE([0-9]+\.[0-9]+)',i)[0]
+            #int = re.sub("\s+", ",", i).split(',')[0]
         except:
             continue
-        else:
-            dic_temp['Bundle-Ether'+int]['description']=re.findall(r"\*\*\*\*\* ([\w_\.]+)",i)[0]
+        try:
+            dic_temp['Bundle-Ether'+int]['description'] = re.findall(r"\*\*\*\*\* ([\w_\.\s]+)",i)[0]
+        except:
+            dic_temp['Bundle-Ether'+int]['description'] = "Sin descripcion"
 
     for i in dic_temp.keys():
         dic_temp[i]['in_new']=module.params['var4'][dic_temp[i]['in_old']]
