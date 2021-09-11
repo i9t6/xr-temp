@@ -32,7 +32,7 @@
 
 # archivos para guardar los diccionarios en json con el resumen de
 # los cambios, rollback y donde se tendra la configuración temporal de QoS
-   storage_path: '/tmp'
+   storage_path: '/ice'
    file_changes_json: '10-policy-map-cambios'
    file_rollback_json: '11-policy-map-rollback'
    file_policymap_cfg: '12-policy-map-temporal'
