@@ -53,7 +53,7 @@
         - service-policy input {{item.value.in_new }}
         parents: interface {{ item.key }}
       loop: "{{ new_var | dict2items }}"
-      #no_log: true
+      no_log: true
 
     - name: Respaldo policy_map Bundle{{ bundle_var }} despues del cambio
       cisco.iosxr.iosxr_command:
