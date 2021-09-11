@@ -80,7 +80,7 @@
           record: "{{ final_var.meta }}"
         - file: '{{ file_rollback_json }}'
           record: "{{ final_var_rollback.meta }}"
-      #no_log: true
+      no_log: true
 
     - name: Resumen de informacion recopilada
       debug:
