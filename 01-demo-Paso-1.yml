@@ -34,7 +34,7 @@
       set_fact:
         list_servicios: "{{ list_servicios|default([]) + [item] }}"
       loop: "{{ temp_var1.stdout_lines[0] | regex_findall('Bundle-Ether[0-9]+\\.[0-9]+') }}"
-      #no_log: true
+      no_log: true
     
     - name: Policy-map en las subinterfaces del bundle {{ bundle_var }}
       cisco.iosxr.iosxr_command:
@@ -52,11 +52,14 @@
     - name: Creando resumen de cambios temporales, (formato JSON)
       # modulo en python para crear json de los cambios
       demo_module_01:
-        var1: '{{ temp_var1.stdout_lines[0] }}'
-        var2: '{{ temp_var2.results }}'
-        var3: '{{ temp_var3.stdout_lines[0] }}'
-        var4: '{{ tabla_maps }}'
+        var1: '{{ temp_var2.results }}'
+        var2: '{{ temp_var3.stdout_lines[0] }}'
+        var3: '{{ tabla_maps }}'
       register: final_var
+      
+    #- name: print
+    #  debug:
+    #    msg: "{{ final_var }}"
 
     - name: Creando resumen de cambios para restaurar configuracion, (formato JSON)
       # modulo en python para crear el json del rollback
