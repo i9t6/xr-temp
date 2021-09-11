@@ -40,10 +40,11 @@ def main():
     f= open( f"{module.params['var2']}.cfg", "w")
     for old_map, new_map in module.params['var1'].items():
         if not "tbd" in old_map:
-            speed_var=re.findall(r'([0-9]+)Mbps',new_map)[0]
-            pm_var = f"""policy-map {speed_var}Mbps-IN
+            speed = re.findall(r'([0-9]+)',new_map)[0]
+            speed_var = re.findall(r'[0-9]+(.)bps',new_map)[0].lower()
+            pm_var = f"""policy-map {new_map}
  class class-default
-  police rate {speed_var} mbps
+  police rate {speed} {speed_var}bps
    conform-action set precedence 0
    exceed-action drop
   !
