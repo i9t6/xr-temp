@@ -22,10 +22,12 @@
 
    router_var: 'IDCBOR01'
    bundle_var: 100
-   tabla_maps: { '300Mbps-IN' : '600Mbps-IN',
-                 '100Mbps-IN' : '200Mbps-IN',
-                 '50Mbps-IN' : '100Mbps-IN',
+   tabla_maps: { '300Mbps-IN' : '600Mbps-IN-T',
+                 '100Mbps-IN' : '200Mbps-IN-T',
+                 '50Mbps-IN' : '100Mbps-IN-T',
+                 '1Gbps-IN' : '1Gbps-IN-T',
                  'tbd' : 'tbd' }
+   elementos_var: [ 'GigabitEthernet0/0/0/3', 'GigabitEthernet0/0/0/4']
    elementos_var: [ 'GigabitEthernet0/0/0/3', 'GigabitEthernet0/0/0/4']
 
 # archivos para guardar los diccionarios en json con el resumen de
