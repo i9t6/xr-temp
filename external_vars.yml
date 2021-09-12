@@ -28,7 +28,6 @@
                  '1Gbps-IN' : '1Gbps-IN-T',
                  'tbd' : 'tbd' }
    elementos_var: [ 'GigabitEthernet0/0/0/3', 'GigabitEthernet0/0/0/4']
-   elementos_var: [ 'GigabitEthernet0/0/0/3', 'GigabitEthernet0/0/0/4']
 
 # archivos para guardar los diccionarios en json con el resumen de
 # los cambios, rollback y donde se tendra la configuración temporal de QoS
