@@ -19,3 +19,4 @@
 
 # Variables para el ajuste de policy
 csv_file: 'internet.csv'
+hosts: 'Routers-XR'
