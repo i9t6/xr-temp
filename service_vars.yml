@@ -19,4 +19,4 @@
 
 # Variables para el ajuste de policy
 csv_file: 'internet.csv'
-hosts: 'cisco-router'
+hosts: 'xr-1'
