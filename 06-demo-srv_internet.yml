@@ -16,7 +16,7 @@
 # 
 # AUTHOR(s): Francisco Quiroz <frquiroz@cisco.com>
 - name: Automation XR - ICE
-  hosts: Routers-XR
+  hosts: "{{ hosts }}"
   connection: local
   gather_facts: no
   vars_files:
