@@ -1,0 +1,98 @@
+---
+# Copyright (c) 2021 Cisco and/or its affiliates.
+# 
+# This software is licensed to you under the terms of the Cisco Sample
+# Code License, Version 1.1 (the "License"). You may obtain a copy of the
+# License at
+# 
+#                https://developer.cisco.com/docs/licenses
+# 
+# All use of the material herein must be in accordance with the terms of
+# the License. All rights not expressly granted by the License are
+# reserved. Unless required by applicable law or agreed to separately in
+# writing, software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+# or implied.
+# 
+# AUTHOR(s): Francisco Quiroz <frquiroz@cisco.com>
+- name: Automation XR - ICE
+  hosts: "{{ routers_cisco }}"
+  connection: local
+  gather_facts: no
+  vars_files:
+    - ./service_vars.yml
+
+  tasks:
+    - name: Read data from CSV file 
+      read_csv:
+        path: "{{ csv_file }}"
+      register: service
+      delegate_to: localhost
+      run_once: true
+
+    - name: Populate var_routers 
+      demo_module_04:
+        var1: '{{ service.list }}'
+      register: var_routers
+      run_once: true
+
+    #- name: print
+    #  debug:
+    #    msg: "{{ item.hsrp_vars.track }}"
+    #  when: item.hsrp_vars.track
+    #  loop: "{{ var_routers.meta[key] }}"
+    #  run_once: true
+
+    - name: Borrar  ruta estatica
+      cisco.iosxr.iosxr_config:
+        lines:
+        - "no {{  item.subnet[1] }}/{{  item.mask_length[0] }} {{  item.nexthop  }}"
+        parents:
+        - router static
+        - address-family ipv4 unicast
+      loop: "{{ var_routers.meta[key] }}"
+      no_log: true
+
+    - name: Borar redes en BGP
+      cisco.iosxr.iosxr_config:
+        lines:
+        - "no network {{  item.subnet[0] }}/{{  item.mask_length[0] }}"
+        - "no network {{  item.subnet[1] }}/{{  item.mask_length[0] }}"
+        parents:
+        - router bgp 6568
+        - address-family ipv4 unicast
+      loop: "{{ var_routers.meta[key] }}"
+      no_log: true
+
+    - name: Borar Filtro de ACL
+      cisco.iosxr.iosxr_config:
+        lines:
+        - "no {{  item.acl_sequence[0] }} permit ipv4 any {{  item.subnet[0] }} {{  item.wildcard[0] }}"
+        - "no {{  item.acl_sequence[1] }} permit ipv4 any {{  item.subnet[1] }} {{  item.wildcard[0] }}"
+        parents: ipv4 access-list {{  item.acl }} 
+      loop: "{{ var_routers.meta[key] }}"
+      no_log: true
+
+    - name: Borrar HSRP
+      cisco.iosxr.iosxr_config:
+        lines:
+        - no interface Bundle-Ether{{  item.bundle  }}.{{  item.subinterfaz  }}
+        parents: 
+        - router hsrp
+      loop: "{{ var_routers.meta[key] }}"
+      no_log: true
+
+    - name: Subinterfaz del servicio de Internet
+      cisco.iosxr.iosxr_config:
+        lines:
+        - no interface Bundle-Ether{{ item.bundle }}.{{ item.subinterfaz }}
+      loop: "{{ var_routers.meta[key] }}"
+      no_log: true
+
+    - name: Prefix-list
+      cisco.iosxr.iosxr_config:
+        lines:
+        - "no prefix-set {{  item.prefix_set  }}"
+        parents:
+      loop: "{{ var_routers.meta[key] }}"
+      no_log: true      
