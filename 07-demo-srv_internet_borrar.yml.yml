@@ -59,7 +59,7 @@
         - "no network {{  item.subnet[0] }}/{{  item.mask_length[0] }}"
         - "no network {{  item.subnet[1] }}/{{  item.mask_length[0] }}"
         parents:
-        - router bgp 65000
+        - "router bgp {{ bgp_AS}}"
         - address-family ipv4 unicast
       loop: "{{ var_routers.meta[key] }}"
       no_log: true
