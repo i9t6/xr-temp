@@ -1,19 +1,19 @@
 ---
 # Copyright (c) 2021 Cisco and/or its affiliates.
-# 
+#
 # This software is licensed to you under the terms of the Cisco Sample
 # Code License, Version 1.1 (the "License"). You may obtain a copy of the
 # License at
-# 
+#
 #                https://developer.cisco.com/docs/licenses
-# 
+#
 # All use of the material herein must be in accordance with the terms of
 # the License. All rights not expressly granted by the License are
 # reserved. Unless required by applicable law or agreed to separately in
 # writing, software distributed under the License is distributed on an "AS
 # IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
 # or implied.
-# 
+#
 # AUTHOR(s): Francisco Quiroz <frquiroz@cisco.com>
 - name: Automation XR - ICE
   hosts: "{{ router_cisco }}"
@@ -22,21 +22,21 @@
   no_log: true
   vars_files:
     - ./service_vars.yml
-  
+
   tasks:
-    - name: Read data from CSV file 
+    - name: Read data from CSV file
       read_csv:
         path: "{{ csv_file }}"
       register: service
       delegate_to: localhost
       run_once: true
 
-    - name: Populate var_routers 
+    - name: Populate var_routers
       demo_module_04:
         var1: '{{ service.list }}'
       register: var_routers
       run_once: true
-   
+
     - name: Configure Internet Service Sub-Interface
       cisco.iosxr.iosxr_config:
         lines:
@@ -48,7 +48,7 @@
         parents: interface Bundle-Ether{{ item.bundle }}.{{ item.subinterfaz }}
       when: item.bundle
       loop: "{{ var_routers.meta[key] }}"
-      
+
     - name: Check 1/7 - show ipv4 interface brief
       cisco.iosxr.iosxr_command:
         commands:
@@ -59,21 +59,21 @@
         - result[0] not contains Down
       when: item.subnet
       loop: "{{ var_routers.meta[key] }}"
-      
+
     - name: Configure HSRP
       cisco.iosxr.iosxr_config:
         lines:
         - authentication {{ item.authentication  }}
         - preempt
         - address {{  item.ip_hsrp  }}
-        parents: 
+        parents:
         - router hsrp
         - interface Bundle-Ether{{  item.bundle  }}.{{  item.subinterfaz  }}
         - address-family ipv4
         - hsrp {{  item.hsrp  }}
       when: item.hsrp and item.bundle
       loop: "{{ var_routers.meta[key] }}"
-      
+
     - name: Check 2/7 - show hsrp brief
       cisco.iosxr.iosxr_command:
         commands:
@@ -83,20 +83,20 @@
         - result[0] contains {{ item.ip_hsrp }}
       when: item.hsrp and item.bundle
       loop: "{{ var_routers.meta[key] }}"
-      
+
     - name: Configure HSRP  Priority & Track
       cisco.iosxr.iosxr_config:
         lines:
         - priority {{ item.hsrp_vars.priority }}
         - track  {{ item.hsrp_vars.track }}
-        parents: 
+        parents:
         - router hsrp
         - interface Bundle-Ether{{  item.bundle  }}.{{  item.subinterfaz  }}
         - address-family ipv4
         - hsrp {{  item.hsrp  }}
       when: item.hsrp_vars and item.hsrp
       loop: "{{ var_routers.meta[key] }}"
-      
+
     - name: Check 3/7 - show hsrp brief for priority
       cisco.iosxr.iosxr_command:
         commands:
@@ -106,16 +106,16 @@
         - result[0] contains {{ item.hsrp_vars.priority }}
       when: item.hsrp_vars and item.hsrp
       loop: "{{ var_routers.meta[key] }}"
-      
+
     - name: Configure ACL Entries
       cisco.iosxr.iosxr_config:
         lines:
         - "{{  item.acl_sequence.0 }} permit ipv4 any {{  item.subnet.0 }} {{  item.wildcard.0 }}"
         - "{{  item.acl_sequence.1 }} permit ipv4 any {{  item.subnet.1 }} {{  item.wildcard.0 }}"
-        parents: ipv4 access-list {{  item.acl }} 
+        parents: ipv4 access-list {{  item.acl }}
       when: item.acl and item.subnet
       loop: "{{ var_routers.meta[key] }}"
-      
+
     - name: Check 4/7 - show access-list
       cisco.iosxr.iosxr_command:
         commands:
@@ -127,7 +127,7 @@
         - result[0] contains {{ item.subnet.1 }}
       when: item.acl and item.subnet
       loop: "{{ var_routers.meta[key] }}"
-      
+
     - name: Configure Static Route
       cisco.iosxr.iosxr_config:
         lines:
@@ -137,7 +137,7 @@
         - address-family ipv4 unicast
       when: item.nexthop and item.subnet
       loop: "{{ var_routers.meta[key] }}"
-      
+
     - name: Check 5/7 - show route static
       cisco.iosxr.iosxr_command:
         commands:
@@ -158,7 +158,7 @@
         - address-family ipv4 unicast
       when: item.subnet
       loop: "{{ var_routers.meta[key] }}"
-          
+
     - name: Configure Prefix-list
       cisco.iosxr.iosxr_config:
         lines:
@@ -180,7 +180,7 @@
       when: item.subnet
       loop: "{{ var_routers.meta[key] }}"
 
-    - name: Check 7/7 - show run prefix-set 
+    - name: Check 7/7 - show run prefix-set
       cisco.iosxr.iosxr_command:
         commands:
         - show run prefix-set {{  item.prefix_set  }}
@@ -190,4 +190,3 @@
         - result[0] contains {{ item.mask_length.0 }}
       when: item.prefix_set and item.subnet
       loop: "{{ var_routers.meta[key] }}"
-      
