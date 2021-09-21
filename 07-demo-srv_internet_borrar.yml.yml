@@ -16,9 +16,10 @@
 # 
 # AUTHOR(s): Francisco Quiroz <frquiroz@cisco.com>
 - name: Automation XR - ICE
-  hosts: "{{ routers_cisco }}"
+  hosts: "{{router_cisco}}"
   connection: local
   gather_facts: no
+  no_log: true
   vars_files:
     - ./service_vars.yml
 
@@ -36,63 +37,121 @@
       register: var_routers
       run_once: true
 
-    #- name: print
-    #  debug:
-    #    msg: "{{ item.hsrp_vars.track }}"
-    #  when: item.hsrp_vars.track
-    #  loop: "{{ var_routers.meta[key] }}"
-    #  run_once: true
-
-    - name: Borrar  ruta estatica
+    - name: Delete static route
       cisco.iosxr.iosxr_config:
         lines:
-        - "no {{  item.subnet[1] }}/{{  item.mask_length[0] }} {{  item.nexthop  }}"
+        - "no {{  item.subnet.1 }}/{{  item.mask_length.0 }} {{  item.nexthop  }}"
         parents:
         - router static
         - address-family ipv4 unicast
+      when: item.nexthop and item.subnet        
       loop: "{{ var_routers.meta[key] }}"
-      no_log: true
-
-    - name: Borar redes en BGP
+      
+    - name: Check 1/6 - show route static
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show route static
+        wait_for:
+        - result[0] not contains {{ item.subnet.1  }}
+        - result[0] not contains {{ item.nexthop }}
+      when: item.nexthop and item.subnet
+      loop: "{{ var_routers.meta[key] }}"
+      
+    - name: Delete networks in BGP
       cisco.iosxr.iosxr_config:
         lines:
-        - "no network {{  item.subnet[0] }}/{{  item.mask_length[0] }}"
-        - "no network {{  item.subnet[1] }}/{{  item.mask_length[0] }}"
+        - "no network {{  item.subnet.0 }}/{{  item.mask_length.0 }}"
+        - "no network {{  item.subnet.1 }}/{{  item.mask_length.0 }}"
         parents:
-        - "router bgp {{ bgp_AS}}"
+        - "router bgp {{ bgp_AS }}"
         - address-family ipv4 unicast
+      when: item.subnet
       loop: "{{ var_routers.meta[key] }}"
-      no_log: true
-
-    - name: Borar Filtro de ACL
+      
+    - name: Check 2/6 - show bgp ipv4 unicast advertised summary
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show bgp ipv4 unicast advertised summary
+        wait_for:
+        # review conlict with redistributed networks
+        - "result[0] not contains {{ item.subnet.0  }}/{{  item.mask_length.0 }}"
+        - "result[0] not contains {{ item.subnet.1  }}/{{  item.mask_length.0 }}"
+      when: item.subnet
+      loop: "{{ var_routers.meta[key] }}"
+      
+    - name: Delete ACL entries
       cisco.iosxr.iosxr_config:
         lines:
         - "no {{  item.acl_sequence[0] }} permit ipv4 any {{  item.subnet[0] }} {{  item.wildcard[0] }}"
         - "no {{  item.acl_sequence[1] }} permit ipv4 any {{  item.subnet[1] }} {{  item.wildcard[0] }}"
         parents: ipv4 access-list {{  item.acl }} 
+      when: item.acl and item.subnet
       loop: "{{ var_routers.meta[key] }}"
-      no_log: true
-
-    - name: Borrar HSRP
+      
+    - name: Check 3/6 - show access-list {{ item.acl }}
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show access-list {{ item.acl }}
+        wait_for:
+        - result[0] not contains {{ item.acl_sequence.0 }}
+        - result[0] not contains {{ item.subnet.0 }}
+        - result[0] not contains {{ item.acl_sequence.1 }}
+        - result[0] not contains {{ item.subnet.1 }}
+      when: item.acl and item.subnet
+      loop: "{{ var_routers.meta[key] }}"
+      
+    - name: Delete HSRP
       cisco.iosxr.iosxr_config:
         lines:
         - no interface Bundle-Ether{{  item.bundle  }}.{{  item.subinterfaz  }}
         parents: 
         - router hsrp
+      when: item.hsrp and item.bundle
       loop: "{{ var_routers.meta[key] }}"
-      no_log: true
-
-    - name: Subinterfaz del servicio de Internet
+      
+    - name: Check 4/6 - show hsrp brief
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show hsrp brief
+        wait_for:
+        - result[0] not contains {{ item.subinterfaz }}
+        - result[0] not contains {{ item.ip_hsrp }}
+      when: item.hsrp and item.bundle
+      loop: "{{ var_routers.meta[key] }}"
+      
+    - name: Delete Internet Service Sub-Interface
       cisco.iosxr.iosxr_config:
         lines:
         - no interface Bundle-Ether{{ item.bundle }}.{{ item.subinterfaz }}
+      when: item.subnet and item.bundle
       loop: "{{ var_routers.meta[key] }}"
-      no_log: true
+      #
 
-    - name: Prefix-list
+    - name: Check 5/6 - show ipv4 interface brief
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show ipv4 interface brief
+        wait_for:
+        - result[0] not contains {{ item.subinterfaz }}
+        - result[0] not contains {{ item.ip }}
+      when: item.subnet
+      loop: "{{ var_routers.meta[key] }}"
+      
+    - name: Delete Prefix-list
       cisco.iosxr.iosxr_config:
         lines:
         - "no prefix-set {{  item.prefix_set  }}"
         parents:
+      when: item.prefix_set and item.subnet
       loop: "{{ var_routers.meta[key] }}"
-      no_log: true      
+            
+    - name: Check 6/6 - show run prefix-set 
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show run prefix-set {{  item.prefix_set  }}
+        wait_for:
+        - result[0] not contains {{ item.subnet.0  }}
+        - result[0] not contains {{ item.subnet.1  }}
+      when: item.prefix_set and item.subnet
+      loop: "{{ var_routers.meta[key] }}"
+      
