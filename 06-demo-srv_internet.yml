@@ -16,9 +16,10 @@
 # 
 # AUTHOR(s): Francisco Quiroz <frquiroz@cisco.com>
 - name: Automation XR - ICE
-  hosts: "{{ routers_cisco }}"
+  hosts: "{{ router_cisco }}"
   connection: local
   gather_facts: no
+  no_log: true
   vars_files:
     - ./service_vars.yml
   
@@ -35,15 +36,8 @@
         var1: '{{ service.list }}'
       register: var_routers
       run_once: true
-
-    #- name: print
-    #  debug:
-    #    msg: "{{ item.hsrp_vars.track }}"
-    #  when: item.hsrp_vars.track
-    #  loop: "{{ var_routers.meta[key] }}"
-    #  run_once: true
-    
-    - name: Subinterfaz del servicio de Internet
+   
+    - name: Configure Internet Service Sub-Interface
       cisco.iosxr.iosxr_config:
         lines:
         - description ***{{ item.descripcion }}***
@@ -52,10 +46,21 @@
         - ipv4 address {{ item.ip }} {{ item.mask[0] }}
         - encapsulation dot1q {{ item.subinterfaz  }}
         parents: interface Bundle-Ether{{ item.bundle }}.{{ item.subinterfaz }}
+      when: item.bundle
       loop: "{{ var_routers.meta[key] }}"
-      no_log: true
       
-    - name: Creacion HSRP
+    - name: Check 1/7 - show ipv4 interface brief
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show ipv4 interface brief
+        wait_for:
+        - result[0] contains {{ item.subinterfaz }}
+        - result[0] contains {{ item.ip }}
+        - result[0] not contains Down
+      when: item.subnet
+      loop: "{{ var_routers.meta[key] }}"
+      
+    - name: Configure HSRP
       cisco.iosxr.iosxr_config:
         lines:
         - authentication {{ item.authentication  }}
@@ -66,10 +71,20 @@
         - interface Bundle-Ether{{  item.bundle  }}.{{  item.subinterfaz  }}
         - address-family ipv4
         - hsrp {{  item.hsrp  }}
+      when: item.hsrp and item.bundle
       loop: "{{ var_routers.meta[key] }}"
-      no_log: true
-
-    - name: HSRP  priority & track
+      
+    - name: Check 2/7 - show hsrp brief
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show hsrp brief
+        wait_for:
+        - result[0] contains {{ item.subinterfaz }}
+        - result[0] contains {{ item.ip_hsrp }}
+      when: item.hsrp and item.bundle
+      loop: "{{ var_routers.meta[key] }}"
+      
+    - name: Configure HSRP  Priority & Track
       cisco.iosxr.iosxr_config:
         lines:
         - priority {{ item.hsrp_vars.priority }}
@@ -79,47 +94,100 @@
         - interface Bundle-Ether{{  item.bundle  }}.{{  item.subinterfaz  }}
         - address-family ipv4
         - hsrp {{  item.hsrp  }}
-      when: item.hsrp_vars
+      when: item.hsrp_vars and item.hsrp
       loop: "{{ var_routers.meta[key] }}"
-      no_log: true
-
-    - name: Filtro de ACL
+      
+    - name: Check 3/7 - show hsrp brief for priority
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show hsrp brief
+        wait_for:
+        - result[0] contains {{ item.subinterfaz }}
+        - result[0] contains {{ item.hsrp_vars.priority }}
+      when: item.hsrp_vars and item.hsrp
+      loop: "{{ var_routers.meta[key] }}"
+      
+    - name: Configure ACL Entries
       cisco.iosxr.iosxr_config:
         lines:
-        - "{{  item.acl_sequence[0] }} permit ipv4 any {{  item.subnet[0] }} {{  item.wildcard[0] }}"
-        - "{{  item.acl_sequence[1] }} permit ipv4 any {{  item.subnet[1] }} {{  item.wildcard[0] }}"
+        - "{{  item.acl_sequence.0 }} permit ipv4 any {{  item.subnet.0 }} {{  item.wildcard.0 }}"
+        - "{{  item.acl_sequence.1 }} permit ipv4 any {{  item.subnet.1 }} {{  item.wildcard.0 }}"
         parents: ipv4 access-list {{  item.acl }} 
+      when: item.acl and item.subnet
       loop: "{{ var_routers.meta[key] }}"
-      no_log: true
-
-    - name: Agregar redes en BGP
+      
+    - name: Check 4/7 - show access-list
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show access-list {{ item.acl }}
+        wait_for:
+        - result[0] contains {{ item.acl_sequence.0 }}
+        - result[0] contains {{ item.subnet.0 }}
+        - result[0] contains {{ item.acl_sequence.1 }}
+        - result[0] contains {{ item.subnet.1 }}
+      when: item.acl and item.subnet
+      loop: "{{ var_routers.meta[key] }}"
+      
+    - name: Configure Static Route
       cisco.iosxr.iosxr_config:
         lines:
-        - "network {{  item.subnet[0] }}/{{  item.mask_length[0] }}"
-        - "network {{  item.subnet[1] }}/{{  item.mask_length[0] }}"
-        parents:
-        - "router bgp {{ bgp_AS}}"
-        - address-family ipv4 unicast
-      loop: "{{ var_routers.meta[key] }}"
-      no_log: true
-
-    - name: Creacion de ruta estatica
-      cisco.iosxr.iosxr_config:
-        lines:
-        - "{{  item.subnet[1] }}/{{  item.mask_length[0] }} {{  item.nexthop  }}"
+        - "{{  item.subnet.1 }}/{{  item.mask_length.0 }} {{  item.nexthop  }}"
         parents:
         - router static
         - address-family ipv4 unicast
+      when: item.nexthop and item.subnet
       loop: "{{ var_routers.meta[key] }}"
-      no_log: true
-  
-    - name: Prefix-list
+      
+    - name: Check 5/7 - show route static
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show route static
+        wait_for:
+        - result[0] contains {{ item.subnet.1  }}
+        - result[0] contains {{ item.nexthop }}
+      when: item.nexthop and item.subnet
+      loop: "{{ var_routers.meta[key] }}"
+
+    - name: Configure networks in BGP
       cisco.iosxr.iosxr_config:
         lines:
-        - "{{  item.subnet[0] }}/{{  item.mask_length[0] }}, {{  item.subnet[1] }}/{{  item.mask_length[0] }}"
+        - "network {{  item.subnet.0 }}/{{  item.mask_length.0 }}"
+        - "network {{  item.subnet.1 }}/{{  item.mask_length.0 }}"
+        parents:
+        - "router bgp {{ bgp_AS }}"
+        - address-family ipv4 unicast
+      when: item.subnet
+      loop: "{{ var_routers.meta[key] }}"
+          
+    - name: Configure Prefix-list
+      cisco.iosxr.iosxr_config:
+        lines:
+        - "{{  item.subnet.0 }}/{{  item.mask_length.0 }}, {{  item.subnet.1 }}/{{  item.mask_length.0 }}"
         after:
         - end-set
         parents:
         - "prefix-set {{  item.prefix_set  }}"
+      when: item.prefix_set and item.subnet
       loop: "{{ var_routers.meta[key] }}"
-      no_log: true      
+
+    - name: Check 6/7 - show bgp ipv4 unicast advertised summary
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show bgp ipv4 unicast advertised summary
+        wait_for:
+        - "result[0] contains {{ item.subnet.0  }}/{{ item.mask_length.0 }}"
+        - "result[0] contains {{ item.subnet.1  }}/{{ item.mask_length.0 }}"
+      when: item.subnet
+      loop: "{{ var_routers.meta[key] }}"
+
+    - name: Check 7/7 - show run prefix-set 
+      cisco.iosxr.iosxr_command:
+        commands:
+        - show run prefix-set {{  item.prefix_set  }}
+        wait_for:
+        - result[0] contains {{ item.subnet.0  }}
+        - result[0] contains {{ item.subnet.1  }}
+        - result[0] contains {{ item.mask_length.0 }}
+      when: item.prefix_set and item.subnet
+      loop: "{{ var_routers.meta[key] }}"
+      
