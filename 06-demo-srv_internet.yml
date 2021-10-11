@@ -19,7 +19,7 @@
   hosts: "{{ router_cisco }}"
   connection: local
   gather_facts: no
-  no_log: true
+  #no_log: true
   vars_files:
     - ./service_vars.yml
 
