@@ -52,7 +52,7 @@
     - name: Check 1/7 - show ipv4 interface brief
       cisco.iosxr.iosxr_command:
         commands:
-        - show ipv4 interface brief
+        - show ipv4 interface brief | include {{ item.subinterfaz }}
         wait_for:
         - result[0] contains {{ item.subinterfaz }}
         - result[0] contains {{ item.ip }}
