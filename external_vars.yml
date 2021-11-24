@@ -22,10 +22,10 @@
 
    router_var: 'xr-1'
    bundle_var: 100
-   tabla_maps: { '30Mbps-IN' : '60Mbps-IN-T',
-                 '20Mbps-IN' : '40Mbps-IN-T',
-                 '50Mbps-IN' : '100Mbps-IN-T',
-                 '1Gbps-IN' : '1Gbps-IN-T',
+   tabla_maps: { '30Mbps-IN' : '60Mbps-IN-Temp',
+                 '20Mbps-IN' : '40Mbps-IN-Temp',
+                 '50Mbps-IN' : '100Mbps-IN-Temp',
+                 '1Gbps-IN' : '1Gbps-IN-Temp',
                  'tbd' : 'tbd' }
    elementos_var: [ 'GigabitEthernet0/0/0/3', 'GigabitEthernet0/0/0/4']
 
