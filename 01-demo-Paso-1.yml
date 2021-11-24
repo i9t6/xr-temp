@@ -66,6 +66,12 @@
       demo_module_02:
         var1: '{{ final_var.meta }}'
       register: final_var_rollback
+    
+    - name: Borrando archivos de previos
+      file: state=absent path={{ storage_path }}/{{ item }}.json
+      loop:
+        - '{{ file_changes_json }}'
+        - '{{ file_rollback_json }}'
 
     - name: Creando archivos de respaldo
       file: state=touch path={{ storage_path }}/{{ item }}.json
