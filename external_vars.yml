@@ -22,8 +22,8 @@
 
    router_var: 'IDCBOR01'
    bundle_var: 100
-   tabla_maps: { '300Mbps-IN' : '600Mbps-IN-T',
-                 '100Mbps-IN' : '200Mbps-IN-T',
+   tabla_maps: { '30Mbps-IN' : '60Mbps-IN-T',
+                 '20Mbps-IN' : '40Mbps-IN-T',
                  '50Mbps-IN' : '100Mbps-IN-T',
                  '1Gbps-IN' : '1Gbps-IN-T',
                  'tbd' : 'tbd' }
