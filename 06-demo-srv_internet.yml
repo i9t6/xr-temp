@@ -163,6 +163,7 @@
       cisco.iosxr.iosxr_command:
         commands:
         - command: 'edit prefix-set {{  item.prefix_set  }} inline add {{  item.subnet.0 }}/{{  item.mask_length.0 }}'
+          # when you specify prompt string, it goes to re. Any non-alphanumeric characters should be prefixed by escape "\" like dot(.) brackets ({}, [], ()), question mark (?) 
           prompt: 'Proceed with commmit \(yes/no\)\? \[yes\]:'
           answer: 'yes' 
         - command: 'edit prefix-set {{  item.prefix_set  }} inline add {{  item.subnet.1 }}/{{  item.mask_length.0 }}'
