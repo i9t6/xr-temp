@@ -19,7 +19,7 @@
   hosts: "{{router_cisco}}"
   connection: local
   gather_facts: no
-  no_log: true
+  #no_log: true
   vars_files:
     - ./service_vars.yml
 
@@ -128,12 +128,24 @@
       loop: "{{ var_routers.meta[key] }}"
       
     - name: Delete Prefix-list
-      cisco.iosxr.iosxr_config:
-        lines:
-        - "no prefix-set {{  item.prefix_set  }}"
-        parents:
-      when: item.prefix_set and item.subnet
+      cisco.iosxr.iosxr_command:
+        commands:
+        - command: 'edit prefix-set {{  item.prefix_set  }} inline remove {{  item.subnet.0 }}/{{  item.mask_length.0 }}'
+          prompt: 'Proceed with commmit \(yes/no\)\? \[yes\]:'
+          answer: 'yes' 
+        - command: 'edit prefix-set {{  item.prefix_set  }} inline remove {{  item.subnet.1 }}/{{  item.mask_length.0 }}'
+          prompt: 'Proceed with commmit \(yes/no\)\? \[yes\]:' 
+          answer: 'yes' 
+      register: temp_var1
       loop: "{{ var_routers.meta[key] }}"
+      
+
+    #- name: print
+    #  debug:
+    #    msg: "{{ temp_var1 }}"
+
+
+
             
     - name: Check 5/6 - show run prefix-set 
       cisco.iosxr.iosxr_command:

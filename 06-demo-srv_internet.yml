@@ -19,7 +19,7 @@
   hosts: "{{ router_cisco }}"
   connection: local
   gather_facts: no
-  no_log: true
+  #no_log: true
   vars_files:
     - ./service_vars.yml
 
@@ -159,16 +159,21 @@
       when: item.subnet
       loop: "{{ var_routers.meta[key] }}"
 
-    - name: Configure Prefix-list
-      cisco.iosxr.iosxr_config:
-        lines:
-        - "{{  item.subnet.0 }}/{{  item.mask_length.0 }}, {{  item.subnet.1 }}/{{  item.mask_length.0 }}"
-        after:
-        - end-set
-        parents:
-        - "prefix-set {{  item.prefix_set  }}"
-      when: item.prefix_set and item.subnet
+    - name: Configure Prefix-set
+      cisco.iosxr.iosxr_command:
+        commands:
+        - command: 'edit prefix-set {{  item.prefix_set  }} inline add {{  item.subnet.0 }}/{{  item.mask_length.0 }}'
+          prompt: 'Proceed with commmit \(yes/no\)\? \[yes\]:'
+          answer: 'yes' 
+        - command: 'edit prefix-set {{  item.prefix_set  }} inline add {{  item.subnet.1 }}/{{  item.mask_length.0 }}'
+          prompt: 'Proceed with commmit \(yes/no\)\? \[yes\]:' 
+          answer: 'yes' 
+      register: temp_var1
       loop: "{{ var_routers.meta[key] }}"
+
+    #- name: print
+    #  debug:
+    #    msg: "{{ temp_var1 }}"
 
     - name: Check 6/7 - show bgp ipv4 unicast advertised summary
       cisco.iosxr.iosxr_command:
