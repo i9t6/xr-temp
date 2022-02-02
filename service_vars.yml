@@ -20,5 +20,5 @@
 # Variables para el ajuste de policy, pueden estar aqui o en AWX en el template
 
 #csv_file: 'internet.csv'
-#router_cisco: 'xr-1'
+#routers_cisco: 'xr-1'
 #bgp_AS: '6568'
